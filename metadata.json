@@ -1,0 +1,6 @@
+{
+  "name": "Bridgeafriport",
+  "description": "Multinational market-entry, trade development, commercial representation, and business expansion corporation connecting global enterprises to high-growth African markets.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Fraunces", Georgia, serif;
+  --font-display: "Fraunces", Georgia, serif;
+  --font-sans: "Space Grotesk", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+
+  --color-navy: #0E1A2B;
+  --color-navy-dark: #09111D;
+  --color-navy-light: #15263D;
+  --color-navy-card: #122135;
+  --color-bridge-green: #2E7D32;
+  --color-bridge-green-dark: #1E5622;
+  --color-apple-green: #6BBF59;
+  --color-warm-ivory: #F7F5EE;
+  --color-warm-ivory-dim: #E6E2D3;
+  --color-premium-gold: #C9A227;
+  --color-premium-gold-light: #DFB942;
+  --color-charcoal: #1B1F23;
+  --color-charcoal-dark: #111417;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    color: var(--color-warm-ivory);
+    background-color: var(--color-navy);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-serif);
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0E1A2B;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e334e;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2E7D32;
+}
