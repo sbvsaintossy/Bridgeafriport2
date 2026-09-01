@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { OFFICES_DATA } from '../data/companyData';
 import { Mail, Phone, MapPin, Send, CheckCircle, AlertCircle, Loader2, Globe, Shield, Clock, Building, Sparkles } from 'lucide-react';
-import confetti from 'canvas-confetti';
 
 export const ContactPage: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -57,11 +56,17 @@ export const ContactPage: React.FC = () => {
 
       if (response.ok) {
         setStatus('success');
-        confetti({
-          particleCount: 80,
-          spread: 60,
-          origin: { y: 0.6 }
-        });
+        try {
+          const confettiModule = await import('canvas-confetti');
+          const confetti = confettiModule.default;
+          confetti({
+            particleCount: 80,
+            spread: 60,
+            origin: { y: 0.6 }
+          });
+        } catch {
+          // Graceful fallback if confetti module fails to load
+        }
         setFormData({
           full_name: '',
           company_name: '',

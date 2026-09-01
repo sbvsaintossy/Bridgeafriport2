@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { SERVICES_DATA } from '../data/companyData';
 import { ServiceItem } from '../types';
 import { ShieldCheck, CheckCircle2, FileText, Target, ArrowUpRight, ChevronRight, Layers, ArrowRight } from 'lucide-react';
@@ -6,6 +6,16 @@ import { Link } from 'react-router-dom';
 
 export const ServicesPage: React.FC = () => {
   const [selectedService, setSelectedService] = useState<ServiceItem>(SERVICES_DATA[0]);
+  const showcaseRef = useRef<HTMLElement | null>(null);
+
+  const handleInspectFramework = (srv: ServiceItem) => {
+    setSelectedService(srv);
+    requestAnimationFrame(() => {
+      if (showcaseRef.current) {
+        showcaseRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  };
 
   return (
     <div className="bg-[#0E1A2B] text-[#F7F5EE] min-h-screen">
@@ -36,7 +46,7 @@ export const ServicesPage: React.FC = () => {
       </section>
 
       {/* Main Interactive Services Framework Showcase */}
-      <section className="py-20 lg:py-28 bg-[#0E1A2B] border-b border-[#1E334E]/60">
+      <section ref={showcaseRef} className="py-20 lg:py-28 bg-[#0E1A2B] border-b border-[#1E334E]/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -224,10 +234,7 @@ export const ServicesPage: React.FC = () => {
                     Sector: {srv.targetSectors[0]}
                   </span>
                   <button
-                    onClick={() => {
-                      setSelectedService(srv);
-                      window.scrollTo({ top: 400, behavior: 'smooth' });
-                    }}
+                    onClick={() => handleInspectFramework(srv)}
                     className="text-xs font-mono text-[#6BBF59] hover:text-[#F7F5EE] font-semibold flex items-center gap-1"
                   >
                     <span>Inspect Full Framework</span>

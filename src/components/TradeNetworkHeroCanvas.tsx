@@ -35,6 +35,8 @@ export const TradeNetworkHeroCanvas: React.FC = () => {
   const [selectedRegion, setSelectedRegion] = useState<string>('All');
   const [hoveredNode, setHoveredNode] = useState<RoutePoint | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const dimensionsRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
 
   const regions = ['All', 'Asia', 'Europe', 'North America', 'Middle East', 'South America', 'Oceania'];
 
@@ -42,89 +44,106 @@ export const TradeNetworkHeroCanvas: React.FC = () => {
   const destinations = GLOBAL_NODES.filter(n => n.isDestination);
   const origins = GLOBAL_NODES.filter(n => !n.isDestination);
 
-  // Animated canvas flow lines
+  // Animated canvas flow lines with batched layout reads & requestAnimationFrame
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     let animationFrameId: number;
+    let resizeRafId: number;
     let time = 0;
 
-    const resizeCanvas = () => {
-      if (canvas.parentElement) {
-        canvas.width = canvas.parentElement.clientWidth;
-        canvas.height = canvas.parentElement.clientHeight;
+    // Batched canvas dimension sync using ResizeObserver (prevents forced layout thrashing)
+    const updateCanvasDimensions = (w: number, h: number) => {
+      const roundedW = Math.round(w);
+      const roundedH = Math.round(h);
+      if (dimensionsRef.current.width !== roundedW || dimensionsRef.current.height !== roundedH) {
+        dimensionsRef.current = { width: roundedW, height: roundedH };
+        if (canvas.width !== roundedW) canvas.width = roundedW;
+        if (canvas.height !== roundedH) canvas.height = roundedH;
       }
     };
 
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    const resizeObserver = new ResizeObserver((entries) => {
+      if (!entries || entries.length === 0) return;
+      const entry = entries[0];
+      const { width, height } = entry.contentRect;
+      
+      cancelAnimationFrame(resizeRafId);
+      resizeRafId = requestAnimationFrame(() => {
+        updateCanvasDimensions(width, height);
+      });
+    });
+
+    resizeObserver.observe(container);
 
     const render = () => {
       time += 0.015;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const { width, height } = dimensionsRef.current;
 
-      const width = canvas.width;
-      const height = canvas.height;
+      if (width > 0 && height > 0) {
+        ctx.clearRect(0, 0, width, height);
 
-      // Filter origins based on selected tab
-      const activeOrigins = selectedRegion === 'All'
-        ? origins
-        : origins.filter(o => o.region === selectedRegion);
+        // Filter origins based on selected tab
+        const activeOrigins = selectedRegion === 'All'
+          ? origins
+          : origins.filter(o => o.region === selectedRegion);
 
-      // Draw trade corridors to Africa
-      activeOrigins.forEach((origin, index) => {
-        destinations.forEach((dest, dIndex) => {
-          // Selectively connect to avoid chaotic clutter
-          if ((index + dIndex) % 2 === 0 || selectedRegion !== 'All') {
-            const startX = (origin.x / 100) * width;
-            const startY = (origin.y / 100) * height;
-            const endX = (dest.x / 100) * width;
-            const endY = (dest.y / 100) * height;
+        // Draw trade corridors to Africa
+        activeOrigins.forEach((origin, index) => {
+          destinations.forEach((dest, dIndex) => {
+            // Selectively connect to avoid chaotic clutter
+            if ((index + dIndex) % 2 === 0 || selectedRegion !== 'All') {
+              const startX = (origin.x / 100) * width;
+              const startY = (origin.y / 100) * height;
+              const endX = (dest.x / 100) * width;
+              const endY = (dest.y / 100) * height;
 
-            // Quadratic / Bezier curve control point (arching over the globe)
-            const midX = (startX + endX) / 2;
-            const midY = Math.min(startY, endY) - (Math.abs(startX - endX) * 0.15);
+              // Quadratic / Bezier curve control point (arching over the globe)
+              const midX = (startX + endX) / 2;
+              const midY = Math.min(startY, endY) - (Math.abs(startX - endX) * 0.15);
 
-            // Draw base curve
-            ctx.beginPath();
-            ctx.moveTo(startX, startY);
-            ctx.quadraticCurveTo(midX, midY, endX, endY);
-            ctx.strokeStyle = 'rgba(46, 125, 50, 0.22)';
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
+              // Draw base curve
+              ctx.beginPath();
+              ctx.moveTo(startX, startY);
+              ctx.quadraticCurveTo(midX, midY, endX, endY);
+              ctx.strokeStyle = 'rgba(46, 125, 50, 0.22)';
+              ctx.lineWidth = 1.5;
+              ctx.stroke();
 
-            // Draw animated pulse particles flowing to Africa
-            const progress = (time * 0.4 + (index * 0.25) + (dIndex * 0.15)) % 1;
-            const t = progress;
-            // Bezier formula B(t) = (1-t)^2 P0 + 2(1-t)t P1 + t^2 P2
-            const px = Math.pow(1 - t, 2) * startX + 2 * (1 - t) * t * midX + Math.pow(t, 2) * endX;
-            const py = Math.pow(1 - t, 2) * startY + 2 * (1 - t) * t * midY + Math.pow(t, 2) * endY;
+              // Draw animated pulse particles flowing to Africa
+              const progress = (time * 0.4 + (index * 0.25) + (dIndex * 0.15)) % 1;
+              const t = progress;
+              // Bezier formula B(t) = (1-t)^2 P0 + 2(1-t)t P1 + t^2 P2
+              const px = Math.pow(1 - t, 2) * startX + 2 * (1 - t) * t * midX + Math.pow(t, 2) * endX;
+              const py = Math.pow(1 - t, 2) * startY + 2 * (1 - t) * t * midY + Math.pow(t, 2) * endY;
 
-            // Glowing light packet
-            const glowGrad = ctx.createRadialGradient(px, py, 0, px, py, 6);
-            glowGrad.addColorStop(0, 'rgba(201, 162, 39, 1)');
-            glowGrad.addColorStop(0.4, 'rgba(107, 191, 89, 0.8)');
-            glowGrad.addColorStop(1, 'rgba(46, 125, 50, 0)');
+              // Glowing light packet
+              const glowGrad = ctx.createRadialGradient(px, py, 0, px, py, 6);
+              glowGrad.addColorStop(0, 'rgba(201, 162, 39, 1)');
+              glowGrad.addColorStop(0.4, 'rgba(107, 191, 89, 0.8)');
+              glowGrad.addColorStop(1, 'rgba(46, 125, 50, 0)');
 
-            ctx.fillStyle = glowGrad;
-            ctx.beginPath();
-            ctx.arc(px, py, 6, 0, Math.PI * 2);
-            ctx.fill();
+              ctx.fillStyle = glowGrad;
+              ctx.beginPath();
+              ctx.arc(px, py, 6, 0, Math.PI * 2);
+              ctx.fill();
 
-            // Second trailing light
-            const t2 = (progress - 0.04 + 1) % 1;
-            const px2 = Math.pow(1 - t2, 2) * startX + 2 * (1 - t2) * t2 * midX + Math.pow(t2, 2) * endX;
-            const py2 = Math.pow(1 - t2, 2) * startY + 2 * (1 - t2) * t2 * midY + Math.pow(t2, 2) * endY;
-            ctx.fillStyle = 'rgba(107, 191, 89, 0.6)';
-            ctx.beginPath();
-            ctx.arc(px2, py2, 2.5, 0, Math.PI * 2);
-            ctx.fill();
-          }
+              // Second trailing light
+              const t2 = (progress - 0.04 + 1) % 1;
+              const px2 = Math.pow(1 - t2, 2) * startX + 2 * (1 - t2) * t2 * midX + Math.pow(t2, 2) * endX;
+              const py2 = Math.pow(1 - t2, 2) * startY + 2 * (1 - t2) * t2 * midY + Math.pow(t2, 2) * endY;
+              ctx.fillStyle = 'rgba(107, 191, 89, 0.6)';
+              ctx.beginPath();
+              ctx.arc(px2, py2, 2.5, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          });
         });
-      });
+      }
 
       animationFrameId = requestAnimationFrame(render);
     };
@@ -132,7 +151,8 @@ export const TradeNetworkHeroCanvas: React.FC = () => {
     render();
 
     return () => {
-      window.removeEventListener('resize', resizeCanvas);
+      resizeObserver.disconnect();
+      cancelAnimationFrame(resizeRafId);
       cancelAnimationFrame(animationFrameId);
     };
   }, [selectedRegion]);
@@ -244,7 +264,7 @@ export const TradeNetworkHeroCanvas: React.FC = () => {
               </div>
 
               {/* Map & Trade Network Visual Area */}
-              <div className="relative w-full h-64 sm:h-72 rounded-lg bg-[#070D16] border border-[#1E334E]/60 overflow-hidden flex items-center justify-center">
+              <div ref={containerRef} className="relative w-full h-64 sm:h-72 rounded-lg bg-[#070D16] border border-[#1E334E]/60 overflow-hidden flex items-center justify-center">
                 
                 {/* World Map SVG Silhouette */}
                 <svg
